@@ -8,6 +8,7 @@ class Player:
         self.y = y
         self.speed = 3
         self.radius = 20
+        self.shooting_cooldown = 0.5
 
         # Note: This way of loading the image is only acceptable when there is only one instance of this calss on the screen.
         # If there were multiple instances, the image would have to be loaded multiple times which takes time.

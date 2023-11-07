@@ -6,6 +6,7 @@ from game.player import Player
 from game.bullet import Bullet
 from game.star import Star
 from game.enemy import Enemy
+from game.start_menu import StartMenu
 
 # Initialize Pygame
 pygame.init()
@@ -17,6 +18,11 @@ BLACK = (0, 0, 0) # Colour black
 NUM_STARS = 75 # Defines the number of start on the background
 TARGET_FPS = 140  # Desired frame rate (e.g., 60 FPS)
 PLAYER_RADIUS = 20
+# Define game states
+START = 0
+PLAYING = 1
+GAME_OVER = 2
+current_state = START
 
 # TODO: This could propably be get ridden of
 ENEMY_RADIUS = 20 # Enemies radius that is used in the spawn location calculation
@@ -35,8 +41,6 @@ last_enemy_spawn_time = 0
 space_pressed = False
 # Track the time of the last shot taken by player
 last_shot_time = 0
-# Add a shooting cooldown in seconds 
-shoot_cooldown = 0.5
 # Create a player
 player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
 
@@ -167,19 +171,10 @@ def collisionHandler(bullets, active_enemies):
     # Return bullets and active_enemies lists, where collided bullets and enemies have been removed.
     return bullets, active_enemies
 
-# ------------------------------------------------------
-#              MAIN GAME LOOP STARTS HERE
-# ------------------------------------------------------
-running = True
-while running:
 
-    current_time = pygame.time.get_ticks()  # Get the current time in milliseconds
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # Handle player movement using the Player class's move method
+# Handles players input for movement and shooting.
+# cooldown vould probably be an attribute?
+def handleInput(player, bullets, last_shot_time, space_pressed, current_time):
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         player.move(-player.speed, 0)  # Move left
@@ -191,7 +186,7 @@ while running:
         player.move(0, player.speed)   # Move down
 
      # Check if the spacebar is pressed and if it wasn't pressed in the previous frame
-    if keys[pygame.K_SPACE] and current_time - last_shot_time >= shoot_cooldown * 1000 and not space_pressed:
+    if keys[pygame.K_SPACE] and current_time - last_shot_time >= player.shooting_cooldown * 1000 and not space_pressed:
         # Create a new bullet at the player's position
         bullet = Bullet(player.x + PLAYER_RADIUS, player.y)
         bullets.append(bullet)
@@ -200,6 +195,32 @@ while running:
     elif not keys[pygame.K_SPACE]:
         space_pressed = False
 
+    return bullets, last_shot_time, space_pressed
+
+# ------------------------------------------------------
+#              MAIN GAME LOOP STARTS HERE
+# ------------------------------------------------------
+
+running = True
+while running:
+
+    current_time = pygame.time.get_ticks()  # Get the current time in milliseconds
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    if current_state == START:
+        # Draw the start menu "Press SPACE to Start"
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                current_state = PLAYING
+
+    if current_state == GAME_OVER:
+        # Draw the game over screen and options to restart or quit
+        i = 0
+
+    bullets, last_shot_time, space_pressed = handleInput(player, bullets, last_shot_time, space_pressed, current_time)
     stars = handleStars(stars)
     bullets = handleBullets(bullets)
     # TODO: Enemy spawn time should be handled in a smarter way. This seems a bit iffy
