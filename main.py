@@ -197,6 +197,43 @@ def handleInput(player, bullets, last_shot_time, space_pressed, current_time):
 
     return bullets, last_shot_time, space_pressed
 
+
+def game_over_screen():
+    # Create a font for the game over message
+    game_over_font = pygame.font.Font(None, 48)
+    game_over_text = game_over_font.render("Game Over", True, (255, 0, 0))
+    game_over_rect = game_over_text.get_rect()
+    game_over_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50)
+
+    # Create a font for the restart and quit options
+    options_font = pygame.font.Font(None, 36)
+    restart_text = options_font.render("Play Again (Press SPACE)", True, (255, 255, 255))
+    restart_rect = restart_text.get_rect()
+    restart_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20)
+
+    quit_text = options_font.render("Quit (Press Q)", True, (255, 255, 255))
+    quit_rect = quit_text.get_rect()
+    quit_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 70)
+
+    # Draw the game over message and options on the screen
+    screen.blit(game_over_text, game_over_rect)
+    screen.blit(restart_text, restart_rect)
+    screen.blit(quit_text, quit_rect)
+
+    # Update the display
+    pygame.display.flip()
+
+    # Check for user input to restart or quit the game
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    # Reset the game 
+                    return
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    sys.exit()
+
 # ------------------------------------------------------
 #              MAIN GAME LOOP STARTS HERE
 # ------------------------------------------------------
@@ -217,8 +254,7 @@ while running:
                 current_state = PLAYING
 
     if current_state == GAME_OVER:
-        # Draw the game over screen and options to restart or quit
-        i = 0
+        game_over_screen()
 
     bullets, last_shot_time, space_pressed = handleInput(player, bullets, last_shot_time, space_pressed, current_time)
     stars = handleStars(stars)
@@ -226,6 +262,11 @@ while running:
     # TODO: Enemy spawn time should be handled in a smarter way. This seems a bit iffy
     last_enemy_spawn_time = handleEnemies(active_enemies, current_time, last_enemy_spawn_time)
     bullets, active_enemies = collisionHandler(bullets, active_enemies)
+
+
+    for enemy in active_enemies:
+        if enemy.y > SCREEN_HEIGHT:
+            current_state = GAME_OVER
 
     # Clear the screen
     screen.fill(BLACK)
