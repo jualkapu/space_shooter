@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 import pygame
 import sys
 import random
@@ -10,32 +11,22 @@ from game.enemy import Enemy
 pygame.init()
 
 # Define constant variables
-ENEMY_SPAWN_INTERVAL = 1000
-SCREEN_WIDTH, SCREEN_HEIGHT = 600, 800
-BLACK = (0, 0, 0)
-ENEMY_RADIUS = 20
-NUM_STARS = 75
+ENEMY_SPAWN_INTERVAL = 1000 # Defines the interval which enemies spawn
+SCREEN_WIDTH, SCREEN_HEIGHT = 600, 800 # Defines the size of the screen
+BLACK = (0, 0, 0) # Colour black
+NUM_STARS = 75 # Defines the number of start on the background
 TARGET_FPS = 140  # Desired frame rate (e.g., 60 FPS)
 PLAYER_RADIUS = 20
+
+# TODO: This could propably be get ridden of
+ENEMY_RADIUS = 20 # Enemies radius that is used in the spawn location calculation
 
 # Create the game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 # Create a clock object to control the frame rate
 clock = pygame.time.Clock()
-
-player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
-
-# Initialize stars
-# Each entry in "stars" consist of x coordinate, y coordinate and speed value.
-stars = []
-for _ in range(NUM_STARS):
-    x = random.randint(0, SCREEN_WIDTH)
-    y = random.randint(0, SCREEN_HEIGHT)
-    speed = random.random()
-    stars.append(Star(x, y, speed))
-
 # Create a list to store active enemies
-enemies = []
+active_enemies = []
 # Create a list to store active bullets
 bullets = []
 # Initialize a variable to track the time of the last enemy spawn
@@ -46,57 +37,135 @@ space_pressed = False
 last_shot_time = 0
 # Add a shooting cooldown in seconds 
 shoot_cooldown = 0.5
+# Create a player
+player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
 
-# This function handles all the drawing that is done on every frame
-def drawingHandler(bullets, stars, player, enemies):
+# Initialize stars for the backgroung of the game
+stars = []
+
+for _ in range(NUM_STARS):
+
+    # Chooses random beginning coordinates for the stars
+    x = random.randint(0, SCREEN_WIDTH)
+    y = random.randint(0, SCREEN_HEIGHT)
+    speed = random.random() # returns [0,1]
+    stars.append(Star(x, y, speed))
+
+# Handles all the drawing that is done on screenevery frame
+def handleDrawing(bullets, stars, player, enemies):
     # Draw bullets
     for bullet in bullets:
         bullet.draw(screen)
+
     # Draw stars
     for star in stars:
         star.draw(screen)
+
+    # Draw enemies
     for enemy in enemies:
         enemy.draw(screen)
+
     # Draw the player
     player.draw(screen)
 
+
+# Updates the positions and blinking states of the stars. 
 def handleStars(stars):
-    # Update star positions and adjust speed based on player's vertical movement
     for star in stars:
+        # Increases the y coordinate by its speed, causing it to move downward.
         star.y += star.speed
+
+        # If the star is not already blinking and a random number is less than the "BLINK_PROBABILITY"
+        if not star.is_blinking and random.random() < star.blink_probability:
+            star.is_blinking = True
+            star.blink_duration = random.randint(*star.blink_duration_range)
+
+        # If the star is already blinking, its "blink_duration" is reduced by 1 in each frame as the function is called once per frame
+        if star.is_blinking:
+            star.blink_duration -= 1
+
+            # At 0, the blinking stops
+            if star.blink_duration == 0:
+                star.is_blinking = False
+
+        # At the bottom, star is repositioned to the top of the screen with a new random x coordinate.
         if star.y > SCREEN_HEIGHT:
-            # Reset star when it goes off the screen
             star.x = random.randint(0, SCREEN_WIDTH)
             star.y = 0
+
     return stars
 
+# Updates the positions of the bullets.
 def handleBullets(bullets):
-    new_bullets = []
-    for bullet in bullets:
-        bullet.move()
-        if bullet.y > 0:
-            new_bullets.append(bullet)
-    return new_bullets
-    
-# Function to spawn a new enemy
-def spawn_enemy():
-    x = random.randint(0, SCREEN_WIDTH - ENEMY_RADIUS * 2)  # Random x-coordinate within the  SCREEN_WIDTH
-    enemy = Enemy(x, 0, random.randint(1,2))  # Start enemies at the top of the screen
-    enemies.append(enemy)
+    active_bullets = []
 
-def collisionHandler(bullets, enemies):
+    for bullet in bullets:
+
+        # Updates the y coordinate of the bullet, causing it to move upwards.
+        bullet.move()
+
+        # If y coordinate is less than 0, it'soff the screen. Only bullets that are "on screen" need to be updated next frame.
+        if bullet.y > 0:
+            active_bullets.append(bullet)
+
+    return active_bullets
+
+
+# Updates enemy locations and spaw, return the latest enemy spawn time 
+def handleEnemies(active_enemies, current_time, last_enemy_spawn_time):
+    # Check if it's time to spawn a new enemy
+    if current_time - last_enemy_spawn_time >= ENEMY_SPAWN_INTERVAL:
+        spawn_enemy()
+        # Update the last enemy spawn time
+        last_enemy_spawn_time = current_time
+
+    # Move active enemies downward
+    for enemy in active_enemies:
+        enemy.move()  
+
+    # return the latest enemy spawn time 
+    return last_enemy_spawn_time
+
+
+# Creates new enemies on the random x coordinate on top of the screen, and adds them to list of active enemies
+def spawn_enemy():
+    # Random x-coordinate within the SCREEN_WIDTH
+    x = random.randint(0, SCREEN_WIDTH - ENEMY_RADIUS * 2)  
+
+    # Creates a new instance of "enemy" class
+    enemy = Enemy(x, 0, random.randint(1,2))  
+
+    # Adds new enemies to list of active enemies
+    active_enemies.append(enemy)
+
+
+# Handles the collisions of bullets and active enemies
+def collisionHandler(bullets, active_enemies):
+
+    # List to store the indexes of bullet and enemy pairs that have collided.
     collisions = []
+
+    # The outer loop iterates through the bullets in the bullets list.
     for i, bullet in enumerate(bullets):
         bullet_rect = bullet.hit_box
-        for j, enemy in enumerate(enemies):
+
+        # Inner loop iterates through the active enemies in the active_enemies list.
+        for j, enemy in enumerate(active_enemies):
             enemy_rect = enemy.hit_box
+
+            # If the hitbox of a bullet collides with the hitbox of an enemy: bullet has hit the enemy.
             if bullet_rect.colliderect(enemy_rect):
-                collisions.append((i, j))  # Store the indices of bullet and enemy pairs   
-    # Remove bullets that have collided with enemies
+
+                # Store the bullet and enemy that hit each other as a tuple
+                collisions.append((i, j))    
+
+    # Remove bullets that have collided with enemies. In reverse to avoid index errors when removing elements from the lists.
     for bullet_index, enemy_index in reversed(collisions):
         del bullets[bullet_index]
-        del enemies[enemy_index]
-    return bullets, enemies
+        del active_enemies[enemy_index]
+
+    # Return bullets and active_enemies lists, where collided bullets and enemies have been removed.
+    return bullets, active_enemies
 
 # ------------------------------------------------------
 #              MAIN GAME LOOP STARTS HERE
@@ -133,21 +202,14 @@ while running:
 
     stars = handleStars(stars)
     bullets = handleBullets(bullets)
-    bullets, enemies = collisionHandler(bullets, enemies)
-
-    # Check if it's time to spawn a new enemy
-    if current_time - last_enemy_spawn_time >= ENEMY_SPAWN_INTERVAL:
-        spawn_enemy()  # Spawn a new enemy
-        last_enemy_spawn_time = current_time  # Update the last enemy spawn time
-
-    # Move enemies
-    for enemy in enemies:
-        enemy.move()  # Move enemies downward
+    # TODO: Enemy spawn time should be handled in a smarter way. This seems a bit iffy
+    last_enemy_spawn_time = handleEnemies(active_enemies, current_time, last_enemy_spawn_time)
+    bullets, active_enemies = collisionHandler(bullets, active_enemies)
 
     # Clear the screen
     screen.fill(BLACK)
 
-    drawingHandler(bullets, stars, player, enemies)
+    handleDrawing(bullets, stars, player, active_enemies)
 
     # Update the display
     pygame.display.flip()
