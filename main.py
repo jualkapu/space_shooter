@@ -145,7 +145,6 @@ def spawn_enemy():
 
 # Handles the collisions of bullets and active enemies
 def collisionHandler(bullets, active_enemies):
-
     # List to store the indexes of bullet and enemy pairs that have collided.
     collisions = []
 
@@ -173,7 +172,6 @@ def collisionHandler(bullets, active_enemies):
 
 
 # Handles players input for movement and shooting.
-# cooldown vould probably be an attribute?
 def handleInput(player, bullets, last_shot_time, space_pressed, current_time):
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
