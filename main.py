@@ -195,15 +195,16 @@ def handleInput(player, bullets, last_shot_time, space_pressed, current_time):
 
     return bullets, last_shot_time, space_pressed
 
+
 # Resets game back to starting state
 def resetGame(active_enemies, bullets, player):
     active_enemies = []
     bullets = []
     player.moveToStart()
-
     return active_enemies, bullets
 
 
+# Handles drawing of game over screen, tracks user input and changes the game state if game is restarted 
 def game_over_screen():
     # Create a font for the game over message
     game_over_font = pygame.font.Font(None, 48)
