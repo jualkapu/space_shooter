@@ -3,9 +3,9 @@ import pygame
 WIDTH, HEIGHT = 600, 800
 
 class Player:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    def __init__(self):
+        self.x = WIDTH // 2
+        self.y = HEIGHT - 50
         self.speed = 3
         self.radius = 20
         self.shooting_cooldown = 0.5
@@ -27,6 +27,10 @@ class Player:
             self.y = HEIGHT - self.radius*2
         if self.y < 100:
             self.y = 100
+
+    def moveToStart(self):
+        self.x = WIDTH // 2
+        self.y = HEIGHT - 50
 
     def draw(self, screen):
         screen.blit(self.image, (self.x, self.y))

@@ -42,11 +42,9 @@ space_pressed = False
 # Track the time of the last shot taken by player
 last_shot_time = 0
 # Create a player
-player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
-
+player = Player()
 # Initialize stars for the backgroung of the game
 stars = []
-
 for _ in range(NUM_STARS):
 
     # Chooses random beginning coordinates for the stars
@@ -54,6 +52,7 @@ for _ in range(NUM_STARS):
     y = random.randint(0, SCREEN_HEIGHT)
     speed = random.random() # returns [0,1]
     stars.append(Star(x, y, speed))
+
 
 # Handles all the drawing that is done on screenevery frame
 def handleDrawing(bullets, stars, player, enemies):
@@ -98,6 +97,7 @@ def handleStars(stars):
             star.y = 0
 
     return stars
+
 
 # Updates the positions of the bullets.
 def handleBullets(bullets):
@@ -195,6 +195,14 @@ def handleInput(player, bullets, last_shot_time, space_pressed, current_time):
 
     return bullets, last_shot_time, space_pressed
 
+# Resets game back to starting state
+def resetGame(active_enemies, bullets, player):
+    active_enemies = []
+    bullets = []
+    player.moveToStart()
+
+    return active_enemies, bullets
+
 
 def game_over_screen():
     # Create a font for the game over message
@@ -225,9 +233,8 @@ def game_over_screen():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    # Reset the game 
-                    return
+                if event.key == pygame.K_SPACE:               
+                    return PLAYING
                 elif event.key == pygame.K_q:
                     pygame.quit()
                     sys.exit()
@@ -236,14 +243,14 @@ def game_over_screen():
 #              MAIN GAME LOOP STARTS HERE
 # ------------------------------------------------------
 
-running = True
-while running:
+while True:
 
     current_time = pygame.time.get_ticks()  # Get the current time in milliseconds
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            pygame.quit()
+            sys.exit()
 
     if current_state == START:
         # Draw the start menu "Press SPACE to Start"
@@ -252,7 +259,9 @@ while running:
                 current_state = PLAYING
 
     if current_state == GAME_OVER:
-        game_over_screen()
+        active_enemies, bullets = resetGame(active_enemies, bullets, player)
+        last_enemy_spawn_time, last_shot_time = current_time, current_time
+        current_state = game_over_screen()
 
     bullets, last_shot_time, space_pressed = handleInput(player, bullets, last_shot_time, space_pressed, current_time)
     stars = handleStars(stars)
