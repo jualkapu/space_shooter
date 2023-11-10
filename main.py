@@ -6,7 +6,6 @@ from game.player import Player
 from game.bullet import Bullet
 from game.star import Star
 from game.enemy import Enemy
-from game.start_menu import StartMenu
 
 # Initialize Pygame
 pygame.init()
@@ -27,6 +26,8 @@ current_state = START
 # TODO: This could propably be get ridden of
 ENEMY_RADIUS = 20 # Enemies radius that is used in the spawn location calculation
 
+
+score = 0
 # Create the game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 # Create a clock object to control the frame rate
@@ -144,7 +145,7 @@ def spawn_enemy():
 
 
 # Handles the collisions of bullets and active enemies
-def collisionHandler(bullets, active_enemies):
+def collisionHandler(score, bullets, active_enemies):
     # List to store the indexes of bullet and enemy pairs that have collided.
     collisions = []
 
@@ -164,11 +165,17 @@ def collisionHandler(bullets, active_enemies):
 
     # Remove bullets that have collided with enemies. In reverse to avoid index errors when removing elements from the lists.
     for bullet_index, enemy_index in reversed(collisions):
+        # Add score when enemy is killed
+        if active_enemies[enemy_index].speed == 1:
+            score += 10
+        if active_enemies[enemy_index].speed == 2:
+            score += 20
+
         del bullets[bullet_index]
         del active_enemies[enemy_index]
 
     # Return bullets and active_enemies lists, where collided bullets and enemies have been removed.
-    return bullets, active_enemies
+    return score, bullets, active_enemies
 
 
 # Handles players input for movement and shooting.
@@ -204,41 +211,98 @@ def resetGame(active_enemies, bullets, player):
     return active_enemies, bullets
 
 
-# Handles drawing of game over screen, tracks user input and changes the game state if game is restarted 
-def game_over_screen():
-    # Create a font for the game over message
-    game_over_font = pygame.font.Font(None, 48)
-    game_over_text = game_over_font.render("Game Over", True, (255, 0, 0))
-    game_over_rect = game_over_text.get_rect()
-    game_over_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50)
-
-    # Create a font for the restart and quit options
-    options_font = pygame.font.Font(None, 36)
-    restart_text = options_font.render("Play Again (Press SPACE)", True, (255, 255, 255))
-    restart_rect = restart_text.get_rect()
-    restart_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20)
-
-    quit_text = options_font.render("Quit (Press Q)", True, (255, 255, 255))
-    quit_rect = quit_text.get_rect()
-    quit_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 70)
-
-    # Draw the game over message and options on the screen
-    screen.blit(game_over_text, game_over_rect)
-    screen.blit(restart_text, restart_rect)
-    screen.blit(quit_text, quit_rect)
-
-    # Update the display
-    pygame.display.flip()
-
-    # Check for user input to restart or quit the game
+# Displys "starting menu" and waits for user input to start the game. Changes game state per user input.
+def start_screen():
     while True:
         for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(BLACK)
+
+        # Create the game title
+        title_font = pygame.font.Font("UchronyScRegular.ttf", 60)
+        title_text = title_font.render("Space Shooter", True, (255, 0, 0))
+        title_rect = title_text.get_rect()
+        title_rect.center = (SCREEN_WIDTH // 2, 200)
+
+        # Create the option to start the game
+        start_font = pygame.font.Font(None, 36)
+        start_text = start_font.render("Press SPACE to start", True, (255, 255, 255))
+        start_rect = start_text.get_rect()
+        start_rect.center = (SCREEN_WIDTH // 2, 450)
+
+        # Draw texts
+        screen.blit(title_text, title_rect)
+        screen.blit(start_text, start_rect)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:               
+                if event.key == pygame.K_SPACE:
                     return PLAYING
                 elif event.key == pygame.K_q:
                     pygame.quit()
                     sys.exit()
+
+
+# Displays a "Game over" screen. Gets player input and based on that either changes the game state or quits the game.
+def game_over_screen():
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(BLACK)
+
+        # Create the game over message
+        game_over_font = pygame.font.Font("UchronyScRegular.ttf", 60)
+        game_over_text = game_over_font.render("Game Over", True, (255, 0, 0))
+        game_over_rect = game_over_text.get_rect()
+        game_over_rect.center = (SCREEN_WIDTH // 2, 200)
+
+        # Create the player's score text
+        score_font = pygame.font.Font(None, 36)
+        score_text = score_font.render("Your score: " + str(score), True, (51, 255, 51))
+        score_rect = score_text.get_rect()
+        score_rect.center = (SCREEN_WIDTH // 2, 300)
+
+        # Create the restart and quit options
+        options_font = pygame.font.Font(None, 36)
+        restart_text = options_font.render("Play Again (Press SPACE)", True, (255, 255, 255))
+        restart_rect = restart_text.get_rect()
+        restart_rect.center = (SCREEN_WIDTH // 2, 450)
+        quit_text = options_font.render("Quit (Press Q)", True, (255, 255, 255))
+        quit_rect = quit_text.get_rect()
+        quit_rect.center = (SCREEN_WIDTH // 2, 500)
+
+        # Draw messages and options on screen
+        screen.blit(game_over_text, game_over_rect)
+        screen.blit(score_text, score_rect)
+        screen.blit(restart_text, restart_rect)
+        screen.blit(quit_text, quit_rect)
+        pygame.display.flip()
+
+        # Get user input and based on that either changes the game state or quits the game.
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    return PLAYING
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    sys.exit()
+
+
+# Draws the current score to the left corner of the screen
+def draw_score(score):
+    font = pygame.font.Font(None, 36)
+    text = font.render("Score: " + str(score), True, (255, 255, 255))
+    text_rect = text.get_rect()
+    text_rect.topleft = (10, 10)
+    screen.blit(text, text_rect)
 
 # ------------------------------------------------------
 #              MAIN GAME LOOP STARTS HERE
@@ -254,23 +318,24 @@ while True:
             sys.exit()
 
     if current_state == START:
-        # Draw the start menu "Press SPACE to Start"
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                current_state = PLAYING
+        current_state = start_screen()
 
     if current_state == GAME_OVER:
         active_enemies, bullets = resetGame(active_enemies, bullets, player)
         last_enemy_spawn_time, last_shot_time = current_time, current_time
         current_state = game_over_screen()
+        score = 0
 
     bullets, last_shot_time, space_pressed = handleInput(player, bullets, last_shot_time, space_pressed, current_time)
     stars = handleStars(stars)
     bullets = handleBullets(bullets)
     # TODO: Enemy spawn time should be handled in a smarter way. This seems a bit iffy
     last_enemy_spawn_time = handleEnemies(active_enemies, current_time, last_enemy_spawn_time)
-    bullets, active_enemies = collisionHandler(bullets, active_enemies)
+    score, bullets, active_enemies = collisionHandler(score, bullets, active_enemies)
 
+    # Update the score every 5 seconds
+    if current_time % 5000 == 0:
+        score += 10
 
     for enemy in active_enemies:
         if enemy.y > SCREEN_HEIGHT:
@@ -279,6 +344,7 @@ while True:
     # Clear the screen
     screen.fill(BLACK)
 
+    draw_score(score)
     handleDrawing(bullets, stars, player, active_enemies)
 
     # Update the display
@@ -290,7 +356,3 @@ while True:
 # ------------------------------------------------------
 #               MAIN GAME LOOP ENDS HERE
 # ------------------------------------------------------
-
-# Quit Pygame and the program
-pygame.quit()
-sys.exit()

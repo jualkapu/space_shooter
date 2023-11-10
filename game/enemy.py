@@ -15,7 +15,6 @@ class Enemy:
         self.speed = speed
         self.hit_box = pygame.Rect(x, y, enemy_radius * 2, enemy_radius * 2)  
 
-
     def move(self):
         self.y += self.speed
         self.hit_box.x = self.x
