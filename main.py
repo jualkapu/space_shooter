@@ -178,6 +178,19 @@ def collisionHandler(score, bullets, active_enemies):
     return score, bullets, active_enemies
 
 
+# Checks for collisions between enemies and player. If they collide game is over, else game continues normally
+def handlePlayerCollision(active_enemies, player):
+    # The loop iterates through the enemies in active_enemies list
+    for i, enemy in enumerate(active_enemies):
+        enemy_rect = enemy.hit_box
+        player_rect = player.hit_box
+
+        if player_rect.colliderect(enemy_rect):
+            return GAME_OVER
+
+    return PLAYING
+
+
 # Handles players input for movement and shooting.
 def handleInput(player, bullets, last_shot_time, space_pressed, current_time):
     keys = pygame.key.get_pressed()
@@ -329,9 +342,9 @@ while True:
     bullets, last_shot_time, space_pressed = handleInput(player, bullets, last_shot_time, space_pressed, current_time)
     stars = handleStars(stars)
     bullets = handleBullets(bullets)
-    # TODO: Enemy spawn time should be handled in a smarter way. This seems a bit iffy
     last_enemy_spawn_time = handleEnemies(active_enemies, current_time, last_enemy_spawn_time)
     score, bullets, active_enemies = collisionHandler(score, bullets, active_enemies)
+    current_state = handlePlayerCollision(active_enemies, player)
 
     # Update the score every 5 seconds
     if current_time % 5000 == 0:
